@@ -1,15 +1,49 @@
 # Hungarian Music Community App — Detailed Development Plan
 
+> **Design System**: Dark mode first, Spotify-inspired. Colors: `#121212` bg, `#181818` cards, `#282828` hover, `#1DB954` accent, `#FFFFFF`/`#B3B3B3`/`#727272` text. Font: Inter. Library: Tailwind CSS + Headless UI.
+
 ---
 
 ## Epic 1: Project Setup
 
-### Task 1.1 — Initialize React Frontend
+### Task 1.1 — Initialize React Frontend with Design System
 - Run `npm create vite@latest frontend -- --template react-ts`
-- Install dependencies: `react-router-dom`, `axios`, `@tanstack/react-query`, `tailwindcss`
-- Configure Tailwind CSS
-- Set up folder structure: `src/components/`, `src/pages/`, `src/api/`, `src/hooks/`, `src/contexts/`
-- Create a basic `App.tsx` with router placeholder
+- Install dependencies:
+  - `react-router-dom` — routing between pages
+  - `axios` — HTTP requests to backend
+  - `@tanstack/react-query` — server state management
+  - `tailwindcss` + `postcss` + `autoprefixer` — styling
+  - `@headlessui/react` — accessible UI primitives (dropdowns, modals)
+  - `react-hot-toast` — success/error toast notifications
+- Configure Tailwind with the design system color palette in `tailwind.config.js`:
+  ```js
+  extend: {
+    colors: {
+      'app':       '#121212',   // main background
+      'card':      '#181818',   // card background
+      'hover':     '#282828',   // hover state
+      'accent':    '#1DB954',   // green accent (Spotify-style)
+      'txt-primary':   '#FFFFFF',
+      'txt-secondary': '#B3B3B3',
+      'txt-muted':     '#727272',
+    }
+  }
+  ```
+- Add Inter font via `<link>` in `index.html` (Google Fonts)
+- Set global dark styles in `index.css`:
+  - `body { background-color: #121212; color: #FFFFFF; font-family: 'Inter', sans-serif; }`
+- Set up folder structure:
+  - `src/components/` — reusable UI components (SongCard, ArtistCard, etc.)
+  - `src/pages/` — full page components (FeedPage, LoginPage, etc.)
+  - `src/api/` — Axios API call functions
+  - `src/hooks/` — custom React hooks
+  - `src/contexts/` — React Context providers (AuthContext)
+  - `src/types/` — TypeScript type definitions
+- Create `App.tsx` with:
+  - `QueryClientProvider` wrapping the whole app
+  - `BrowserRouter` with a placeholder route `/`
+  - Root `<div>` with `className="bg-app min-h-screen text-txt-primary"`
+- **Definition of Done**: App loads in browser showing a dark (#121212) background with white text
 
 ### Task 1.2 — Initialize Spring Boot Backend
 - Create project via Spring Initializr with: Spring Web, Spring Security, Spring Data JPA, PostgreSQL Driver, Lombok
@@ -59,23 +93,28 @@
 
 ### Task 2.5 — Frontend: Register Page
 - Create `/register` route and `RegisterPage` component
-- Form fields: name, email, password, city
+- **Design**: Dark card (`bg-card`) centered on page, form fields with dark input styling, accent-colored submit button (`bg-accent text-black`)
+- Form fields: name, email, password, city — each with a label and subtle border (`border-hover`)
 - POST to `/api/auth/register`
-- On success: redirect to login
-- Show validation errors
+- Show **loading state** on submit button (spinner or "Registering...")
+- On success: show green toast, redirect to login
+- Show **error state**: inline red error message below each invalid field
 
 ### Task 2.6 — Frontend: Login Page
 - Create `/login` route and `LoginPage` component
+- **Design**: Same dark card layout as Register page — consistent look
 - Form fields: email, password
 - POST to `/api/auth/login`
 - Store JWT in `localStorage`
-- On success: redirect to home feed
+- Show **loading state** on submit button
+- On success: show toast "Welcome back!", redirect to home feed
+- Show **error state**: "Invalid email or password" message in red
 
 ### Task 2.7 — Frontend: Auth Context
 - Create `AuthContext` using React Context API
 - Store current user + token
 - Provide `login()`, `logout()` methods
-- Create `PrivateRoute` component to protect pages that require login
+- Create `PrivateRoute` component to redirect unauthenticated users to `/login`
 
 ---
 
@@ -102,14 +141,26 @@
 - `DELETE /api/artists/{id}/follow` — unfollow
 - Both require authentication
 
-### Task 3.5 — Frontend: Artist Profile Page
-- Create `/artist/:id` route and `ArtistProfilePage` component
-- Display: name, bio, city, image, follower count
-- Follow/unfollow button (shown when logged in)
-- List of artist's posts below
+### Task 3.5 — Frontend: ArtistCard Component
+- Reusable `ArtistCard` component matching the design spec:
+  - `bg-card` background, rounded corners, subtle shadow
+  - Circular profile image
+  - Artist name in `text-txt-primary`, city in `text-txt-secondary`
+  - **Follow button**: `bg-accent text-black font-semibold` when not following, outlined when following
+  - Hover: card scales to `scale-[1.02]` with smooth transition (`transition-transform duration-200`)
+- Follow/unfollow works in 1 click with instant UI feedback (optimistic update)
 
-### Task 3.6 — Frontend: Create Artist Profile Form
+### Task 3.6 — Frontend: Artist Profile Page
+- Create `/artist/:id` route and `ArtistProfilePage`
+- **Layout**: Hero section with large profile image + name + city + follower count
+- Follow/unfollow button below stats
+- Artist's posts listed below in a vertical feed
+- **Loading state**: skeleton placeholders while data loads
+- **Error state**: "Artist not found" message
+
+### Task 3.7 — Frontend: Create Artist Profile Form
 - Create `/create-profile` route (protected, only for users without a profile)
+- **Design**: Dark card form, accent-color submit button
 - Form: artist name, bio, city, image URL
 - POST to `/api/artists/profile`
 
@@ -139,18 +190,29 @@
 - `GET /api/posts/{id}` — public
 - Return post + song data + comment count
 
-### Task 4.5 — Frontend: Song Post Card Component
-- `SongCard` component displaying: album art, title, artist name, caption
-- Embedded 30-second audio preview using HTML5 `<audio>` element
-- Play/pause button with visual feedback
-- Link to full artist profile
+### Task 4.5 — Frontend: SongCard Component
+- Reusable `SongCard` component matching the design spec:
+  - `bg-card` background, rounded-xl, subtle shadow — no heavy borders
+  - Album art image (square, rounded corners)
+  - Song title in `text-txt-primary font-semibold`
+  - Artist name in `text-txt-secondary text-sm` — clickable, links to artist profile
+  - Caption text in `text-txt-muted text-sm`
+  - **Play/Pause button**: circular `bg-accent` button with icon, plays the 30s preview via HTML5 `<audio>`
+  - **Only one song plays at a time** — pause others when a new one starts
+  - **Like button**: heart icon, toggles filled/outlined with accent color
+  - Hover: card scales `scale-[1.02]`, transition `duration-200`
+- **Loading state**: skeleton placeholder card
+- **Error state**: "Preview unavailable" gracefully shown
 
 ### Task 4.6 — Frontend: Create Song Post Form
 - `CreateSongPost` page (protected, artists only)
+- **Design**: Dark card form
 - Input: Spotify track search or direct Spotify ID
-- Preview the track before posting
+- Preview the track (show album art + title) before posting
 - Caption input
+- **Loading state** on submit
 - Submit to `POST /api/posts/song`
+- Show success toast on completion
 
 ---
 
@@ -168,14 +230,19 @@
 
 ### Task 5.3 — Frontend: Feed Page
 - `FeedPage` at `/` route
+- **Layout**: centered vertical scroll feed, max-width container
 - Two tabs: "Discover" (global) and "Following" (requires login)
-- Infinite scroll or pagination
+  - Tab underline uses `bg-accent` color, inactive tabs in `text-txt-secondary`
+- Infinite scroll or "Load more" button
 - Renders `SongCard`, `ConcertCard`, `UpdateCard` based on post type
+- **Loading state**: multiple skeleton cards stacked vertically
+- **Empty state**: "No posts yet" message with subtle icon
+- Fade-in animation on cards as they load (`animate-fadeIn`)
 
 ### Task 5.4 — Frontend: React Query Integration
 - Set up `QueryClientProvider` in `App.tsx`
 - Create custom hooks: `useGlobalFeed()`, `useFollowingFeed()`
-- Handle loading states, error states, and empty states
+- Handle loading states, error states, and empty states in each hook
 
 ---
 
@@ -196,18 +263,29 @@
 - Optional filter: `?city=Budapest`
 - Return upcoming concerts sorted by date ASC
 
-### Task 6.4 — Frontend: Concert Card Component
-- `ConcertCard` component: venue, city, date, ticket link button
-- Show artist name and profile link
+### Task 6.4 — Frontend: ConcertCard Component
+- Reusable `ConcertCard` matching design spec:
+  - `bg-card` background, rounded-xl, no heavy borders
+  - Date displayed prominently in `text-accent font-bold`
+  - Venue name in `text-txt-primary font-semibold`
+  - City in `text-txt-secondary text-sm`
+  - **"I'm going" button**: outlined accent button that fills on click (toggle state)
+  - Artist name + link to artist profile
+  - Ticket link button if `ticketUrl` is present
+  - Hover: card scales `scale-[1.02]`
 
 ### Task 6.5 — Frontend: Concerts Page
 - `/concerts` route
-- City filter dropdown
-- List of upcoming concerts using `ConcertCard`
+- **Layout**: vertical list of `ConcertCard` components, max-width container
+- City filter dropdown (Headless UI `Listbox`) — dark styled, accent highlight on selection
+- **Loading state**: skeleton cards
+- **Empty state**: "No upcoming concerts"
 
 ### Task 6.6 — Frontend: Create Concert Post Form
+- **Design**: Dark card form
 - Form: venue, city, date picker, ticket URL, caption
 - Submit to `POST /api/posts/concert`
+- Loading state on submit, success toast on completion
 
 ---
 
@@ -233,11 +311,14 @@
 - Only the comment author can delete
 - Return: 204 No Content
 
-### Task 7.5 — Frontend: Comment Section Component
-- `CommentSection` component below each `SongCard`
-- Show existing comments
-- Comment input box (shown only when logged in)
-- Submit new comment, optimistic UI update via React Query
+### Task 7.5 — Frontend: CommentSection Component
+- `CommentSection` component matching design spec, shown below each `SongCard`:
+  - Comments list: each comment shows user name (`text-txt-secondary`) + comment text (`text-txt-primary`)
+  - Subtle separator between comments (spacing only, no heavy borders)
+  - **Input field**: only shown when logged in — dark input with `bg-hover` background
+  - **Submit button**: accent color, loading state while posting
+  - Optimistic UI update via React Query (comment appears instantly, syncs with server)
+  - Delete button (trash icon) shown only on own comments
 
 ---
 
@@ -254,13 +335,16 @@
 
 ### Task 8.3 — Frontend: City Feed Page
 - `/city/:cityName` route and `CityFeedPage`
-- Displays feed filtered to that city
-- Shows city name as header
+- **Design**: City name as bold `H1` page header in `text-txt-primary`
+- Vertical feed of posts filtered to that city
 - Reuses `SongCard`, `ConcertCard`, `UpdateCard`
+- **Loading state**: skeleton feed
+- **Empty state**: "No posts from [city] yet"
 
 ### Task 8.4 — Frontend: City Navigation
 - City selector in navbar or sidebar
 - Populated from `GET /api/cities`
+- Dark dropdown (Headless UI `Listbox`) — accent highlight on selected city
 - Clicking a city navigates to `/city/:cityName`
 
 ---
@@ -268,24 +352,31 @@
 ## Epic 9: UI Polish & Navigation
 
 ### Task 9.1 — Navbar Component
-- Logo + app name
-- Links: Feed, Concerts, Cities
-- Auth state: show Login/Register or user avatar + logout
-- "Create Post" button for artists
+- Sticky top navbar with `bg-card` background + subtle bottom border using spacing/shadow (no heavy line)
+- Logo + app name in `text-txt-primary font-bold`
+- Links: Feed, Concerts, Cities — in `text-txt-secondary`, active link in `text-txt-primary`
+- Auth state:
+  - Logged out: "Login" + "Register" buttons
+  - Logged in: user avatar/name + "Logout" link + "Create Post" button in `bg-accent text-black`
+- Mobile: collapsible hamburger menu or bottom navigation bar
 
 ### Task 9.2 — Responsive Layout
-- Mobile-first layout using Tailwind
-- Sidebar on desktop, bottom nav on mobile
-- Cards stack vertically on small screens
+- Desktop: centered max-width container with optional sidebar for city/nav links
+- Mobile: single column, stacked cards, large touch targets (min 44px height)
+- Bottom navigation bar on mobile for Feed / Concerts / Cities
+- All cards stack vertically on small screens
 
 ### Task 9.3 — Loading & Error States
-- Global loading spinner component
-- Error boundary for API failures
-- Empty state illustrations for empty feeds
+- Global `SkeletonCard` component matching the shape of `SongCard` and `ConcertCard`
+- Skeleton uses `bg-hover` animated pulse effect
+- Error boundary component for API failures with a dark-styled "Something went wrong" message
+- Empty state components with a subtle icon and `text-txt-muted` text
 
 ### Task 9.4 — Toast Notifications
-- Success/error toasts for: login, register, follow, comment, post creation
-- Use a library like `react-hot-toast`
+- Use `react-hot-toast` configured with dark theme:
+  - Background: `#181818`, text: `#FFFFFF`, border: `#282828`
+  - Success icon in `#1DB954`
+- Show toasts for: login, register, follow, comment, post creation, errors
 
 ---
 
@@ -325,7 +416,7 @@
 |------|-------|----------|
 | 1. Project Setup | 4 | Critical |
 | 2. Authentication | 7 | Critical |
-| 3. Artist Profiles | 6 | High |
+| 3. Artist Profiles | 7 | High |
 | 4. Song Posts | 6 | High |
 | 5. Feed | 4 | High |
 | 6. Concerts | 6 | Medium |
@@ -333,8 +424,8 @@
 | 8. City Feeds | 4 | Medium |
 | 9. UI Polish | 4 | Low |
 | 10. Deployment | 4 | Final |
-| **Total** | **50** | |
+| **Total** | **51** | |
 
 ---
 
-*Generated from: music-community-app-plan.md*
+*Generated from: music-community-app-plan.md + ui-ux-design-guidelines.md*
